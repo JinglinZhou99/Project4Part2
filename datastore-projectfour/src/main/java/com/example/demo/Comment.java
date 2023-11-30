@@ -1,9 +1,13 @@
 package com.example.demo;
+
 import com.google.cloud.spring.data.datastore.core.mapping.Entity;
 import org.springframework.data.annotation.Id;
-
 import java.time.LocalDateTime;
 
+/**
+ * Entity representing a comment.
+ * This class is mapped to a 'comments' table in the datastore.
+ */
 @Entity(name = "comments")
 public class Comment {
     @Id
@@ -46,6 +50,11 @@ public class Comment {
         this.timestamp = timestamp;
     }
 
+    /**
+     * Returns a string representation of the Comment object.
+     *
+     * @return String representation of the Comment object.
+     */
     @Override
     public String toString() {
         return "Comment{" +
