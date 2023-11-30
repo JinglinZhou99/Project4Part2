@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import ControlPanel from './ControlPanel';
-import './App.css'; // Importing CSS for styling
+import './App.css';
 import axios from 'axios';
 
 import { initializeApp } from 'firebase/app';
@@ -9,8 +9,12 @@ import { getAuth, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 
 import backgroundMusic from './yujian.wav';
 
+// Maximum number of guesses allowed
 const MAX_GUESSES = 11;
+
+// Firebase configuration details
 const firebaseConfig = {
+  // My Firebase configuration keys
   apiKey: "AIzaSyCV0-z4-ztLOkCQKQWGYqLxqhhzKOnhQXo",
   authDomain: "noble-freehold-404519.firebaseapp.com",
   projectId: "noble-freehold-404519",
@@ -19,12 +23,14 @@ const firebaseConfig = {
   appId: "1:616928719132:web:290f280f0ae5c2d14ccad9"
 };
 
-
+// Initialize Firebase with the specified configuration
 initializeApp(firebaseConfig);
 
 const App = () => {
-  const [selectedLevel, setSelectedLevel] = useState('easy');// modify
-  const [secret, setSecret] = useState('');// modify
+  // State variables to manage game state and user data
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [selectedLevel, setSelectedLevel] = useState('easy');
+  const [secret, setSecret] = useState('');
 
   const [newHandle1, setNewHandle1] = useState('');
   const [oldHandle, setOldHandle] = useState('');
@@ -32,16 +38,18 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Authentication state management
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState('');
   const [handle, setHandle] = useState('');
-  const [score, setScore] = useState(0); // State to store the score
-  const [gameOver, setGameOver] = useState(false); // State to track if the game is over
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
 
   const [viewOwnRecords, setViewOwnRecords] = useState(false);
 
+  // Pagination state for game records
   const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 5; // You can adjust this number as needed
+  const recordsPerPage = 5;
   const indexOfLastRecord = currentPage * recordsPerPage;
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
   const currentRecords = gameRecords.slice(indexOfFirstRecord, indexOfLastRecord);
@@ -56,13 +64,10 @@ const App = () => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
 
-  // State hook for keeping track of all guesses made
   const [guesses, setGuesses] = useState([]);
-  // The secret combination to be guessed, hardcoded for this example
-  //const secret = "RGBY";
 
+  // Effect hook to manage authentication state and fetch initial data
   useEffect(() => {
-    
     const auth = getAuth();
     auth.onAuthStateChanged(user => {
       if (user) {
@@ -78,26 +83,33 @@ const App = () => {
       displayAllGameRecords();
     }
 
-    // Fetch comments
     axios.get('https://noble-freehold-404519.ue.r.appspot.com/getComments')
     .then(response => {
         setComments(response.data);
     })
     .catch(error => console.error('Error fetching comments:', error));
-
-    startNewRound();//mod
+    
+    startNewRound();
+    let timer;
+    if (!gameOver) {
+      timer = setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
   }, [viewOwnRecords, userId, selectedLevel]);
 
 
+
   const isHandleAvailable = async (handle) => {
-    if (!handle) return true; // Return true if the handle is empty
+    if (!handle) return true;
   
     try {
       const response = await axios.get(`https://noble-freehold-404519.ue.r.appspot.com/checkHandle?handle=${encodeURIComponent(handle)}&userId=${encodeURIComponent(userId)}`);
-      return !response.data; // If the handle is in use, the endpoint should return true
+      return !response.data;
     } catch (error) {
       console.error('Error checking handle:', error);
-      return false; // Handle this as you see fit
+      return false;
     }
   };
   
@@ -110,17 +122,14 @@ const App = () => {
       alert("This handle is already in use by another user. Please choose a different one.");
       return;
     }
-    
     const postData = {
         userId,
         handle,
         score
     };
-
     try {
         const response = await axios.post('https://noble-freehold-404519.ue.r.appspot.com/addGameRecord', postData);
         console.log('Response:', response.data);
-        //showAllRecords()
     } catch (error) {
         console.error('Error posting data:', error);
     }
@@ -134,11 +143,11 @@ const App = () => {
 
   const changeHandle = async () => {
     try {
-      // Find the game record with the old handle
+
       const recordToUpdate = gameRecords.find(record => record.handle=== oldHandle);
 
       if (recordToUpdate) {
-        // Create a copy of the record with the updated handle
+
         const updatedRecord = {
           userId: recordToUpdate.userId,
           handle: newHandle1,
@@ -194,16 +203,19 @@ const App = () => {
   }
 
   const submitComment = () => {
-    axios.post('https://noble-freehold-404519.ue.r.appspot.com/addComment', {
-        userId: userId,
-        content: newComment
-    })
+
+    const postComment = {
+      userId: userId,
+      content: newComment
+  };
+    axios.post('https://noble-freehold-404519.ue.r.appspot.com/addComment',postComment)
     .then(() => {
         setNewComment('');
         // Re-fetch comments or update state
         fetchComments(); // Assuming fetchComments is a function that fetches comments and updates state
     })
     .catch(error => console.error('Error submitting comment:', error));
+    startNewRound();
   };
 
   // You can create a separate function for fetching comments
@@ -293,7 +305,10 @@ const App = () => {
   };
   
   const calculateScore = (numberOfGuesses) => {
-    return (MAX_GUESSES - numberOfGuesses) * 10;
+    const timeBonus = Math.max((MAX_GUESSES - 1) * 10 - elapsedTime, 0);
+    let number = ((MAX_GUESSES - numberOfGuesses) * 10 + timeBonus)/2;
+    let result = Math.floor(number);
+    return (result);
   };
 
   // Function to add a new guess to the state
@@ -358,6 +373,10 @@ const App = () => {
   return (
     <div className="app">
       <h1>MasterMind Game</h1>
+      <div>
+        <p>Timer: {elapsedTime} seconds</p >
+        {/* ... (other UI elements) */}
+      </div>
       <div>
         <button onClick={() => setSelectedLevel('easy')}>Easy</button>
         <button onClick={() => setSelectedLevel('medium')}>Medium</button>
@@ -482,5 +501,4 @@ const App = () => {
   );
 };
 
-// Export the App component for use in other files
 export default App;
