@@ -31,8 +31,8 @@ public interface GameRecordRepository extends CrudRepository<GameRecord, Long> {
    * Deletes all game records associated with a specific handle.
    * Transactional annotation ensures consistency and rollback in case of failure.
    *
-   * @param handle The handle for which game records will be deleted.
+   * @param userId The handle for which game records will be deleted.
    */
   @Transactional
-  void deleteByHandle(String handle);
+  void deleteByHandle(String userId);
 }
