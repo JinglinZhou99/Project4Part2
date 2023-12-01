@@ -34,5 +34,5 @@ public interface GameRecordRepository extends CrudRepository<GameRecord, Long> {
    * @param handle The handle for which game records will be deleted.
    */
   @Transactional
-  void deleteByHandle(String userId);
+  void deleteByHandle(String handle);
 }
